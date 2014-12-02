@@ -2,7 +2,7 @@
 '''
 Script to test race condition on web apps.
 
-Just build request on Burp and use "save item" option to generate a request file.
+Just build request on Burp and use "save items" option to generate a file with all requests.
 
 $ python oportuno request.file
 
@@ -96,8 +96,9 @@ class BurpImporter():
 
 def do_request(args):
 
-        req = args[0]
-        condition = args[1]
+        n = args[0]
+        req = args[1]
+        condition = args[2]
 
         if req.parsed.scheme == 'https':
             c = httplib.HTTPSConnection(req.parsed.hostname, req.parsed.port, timeout=300)
@@ -109,6 +110,8 @@ def do_request(args):
         for header, value in req.headers:
             c.putheader(header, value)
         if req.method.lower() == 'get':
+            with console:
+                print "[Thread #%i] waiting for go" % n
             with condition:
                 # Wait for notify before sending last request line
                 condition.wait()
@@ -128,6 +131,8 @@ def do_request(args):
             self.send(message_body)        
         '''
         c.endheaders()
+        with console:
+            print "[Thread #%i] sent blank line" % n 
         if req.body:
             body = StringIO(req.body)
             assert not isinstance(body, str)
@@ -138,12 +143,12 @@ def do_request(args):
             
             body.seek(-3, os.SEEK_END)
             with console:
-                print "waiting for go"
+                print "[Thread #%i] waiting for go" % n
             with condition:
                 condition.wait()
             c.send(body.read())
             with console:
-                print "last byte sent!"
+                print "[Thread #%i] sent last bit" % n
             
         #c.endheaders(body)
 
@@ -156,7 +161,7 @@ def do_request(args):
         # process response
 
         with condition:
-            print "%i %s" % (resp.status, resp.headers['date'])
+            print "[Thread #%i] Response received: %i %s" % (n, resp.status, resp.headers['date'])
 
 
 if __name__ == '__main__':
@@ -166,15 +171,19 @@ if __name__ == '__main__':
     threads = []
     condition = Condition()
     # create one thread per request
+    i = 1
     for req in reqs:
-        threads.append(Thread(target=do_request, args=((req, condition),)))
+        threads.append(Thread(target=do_request, args=((i, req, condition),)))
+        i += 1
     # start threads
+    with console:
+        print "[*] Waiting for threads to send first bytes..."
     [thread.start() for thread in threads]
     # wait for threads to send first lines
-    print "Waiting for threads..."
     time.sleep(10)
     # finish requests all at once
-    print "Notify threads!!"
+    with console:
+        print "[*] GO!"
     with condition:
         condition.notify_all()
     [thread.join() for thread in threads]
