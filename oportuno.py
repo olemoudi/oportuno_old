@@ -1,4 +1,12 @@
 #!/usr/bin/python
+'''
+Script to test race condition on web apps.
+
+Just build request on Burp and use "save item" option to generate a request file.
+
+$ python oportuno request.file
+
+'''
 
 from threading import Condition
 from threading import Thread
@@ -121,7 +129,6 @@ def do_request(args):
         '''
         c.endheaders()
         if req.body:
-            c.set_debuglevel(3)
             body = StringIO(req.body)
             assert not isinstance(body, str)
             body.seek(0, os.SEEK_END)
