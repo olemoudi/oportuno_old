@@ -4,9 +4,9 @@ Test race conditions on web apps
 
 Script to test race condition on web apps.
 
-Just build request on Burp and use "save item" option to generate a request file.
+Just build request on Burp and use "save items" option to generate a requests file.
 
-    $ python oportuno request.file
+    $ python oportuno requests.file
 
 
 
